@@ -8,7 +8,7 @@ interface User {
     id: string;
     name: string;
     email: string;
-    currency: string;
+    phone?: string;
 }
 
 interface AuthState {
@@ -46,9 +46,7 @@ export const useAuthStore = create<AuthState>()(
             })),
             
             logout: async () => {
-                //await client.resetStore();
                 await client.clearStore();
-                
                 await AsyncStorage.removeItem('auth_token');
                 set({ 
                     token: null,

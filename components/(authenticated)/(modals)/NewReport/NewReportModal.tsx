@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { YStack, Theme, Text, XStack, View, Button, Input, ScrollView, Separator } from 'tamagui';
-import { TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { XMarkIcon, MapPinIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useReportStore } from '~/store/useReportStore';
+import { useReportsStore } from '~/store/useReportsStore';
 import { useMutation, useQuery } from '@apollo/client';
 import { CREATE_REPORT_MUTATION, GET_IMPACT_TYPES_QUERY } from '~/apollo/mutations';
 import { 
@@ -16,7 +16,9 @@ import {
   NetworkStatus
 } from '~/apollo/types';
 import * as Location from 'expo-location';
-import { useNetworkStore } from '~/store/useNetworkStore';
+import { useNetworkStore } from '~/store/networkStore';
+import { v4 as uuidv4 } from 'uuid';
+import { COLORS } from '~/constants/theme';
 
 export const ModalContent = () => {
     const { 
@@ -30,15 +32,16 @@ export const ModalContent = () => {
         setImpactTypeId,
         setLatitude,
         setLongitude,
+        addPendingReport,
         reset 
-    } = useReportStore();
+    } = useReportsStore();
     
     const [filteredImpactTypes, setFilteredImpactTypes] = useState<ImpactType[]>([]);
     const [locationLoading, setLocationLoading] = useState(false);
     const [locationError, setLocationError] = useState<string | null>(null);
     const router = useRouter();
     const { bottom } = useSafeAreaInsets();
-    const { isConnected } = useNetworkStore();
+    const { isConnected, addPendingReport: incrementPendingCount } = useNetworkStore();
     
     const { data: impactTypesData, loading: impactTypesLoading } = useQuery<GetImpactTypesResponse>(
         GET_IMPACT_TYPES_QUERY
@@ -81,31 +84,49 @@ export const ModalContent = () => {
 
     const handleSubmit = async () => {
         if (!description.trim()) {
-            alert('Veuillez décrire le problème');
+            Alert.alert('Erreur', 'Veuillez décrire le problème');
             return;
         }
 
         if (impactTypeId === null) {
-            alert('Veuillez sélectionner un type d\'impact');
+            Alert.alert('Erreur', 'Veuillez sélectionner un type d\'impact');
             return;
         }
 
         const createReportInput: CreateReportInput = {
             description: description.trim(),
-            sentimentText: sentimentText.trim(),
+            sentimentText: sentimentText.trim() || undefined,
             impactTypeId: Number(impactTypeId),
-            latitude,
-            longitude
+            latitude: latitude || undefined,
+            longitude: longitude || undefined
         };
 
         try {
-            const response = await createReport({
-                variables: {
-                    createReportInput
-                },
-                // Si déconnecté, ne pas refetch
-                refetchQueries: isConnected ? ['GetReports', 'GetDailyReportCounts'] : []
-            });
+            // Si connecté, envoyer directement au serveur
+            if (isConnected) {
+                await createReport({
+                    variables: {
+                        createReportInput
+                    },
+                    refetchQueries: ['GetReports', 'GetMonthlyReportCounts']
+                });
+            } 
+            // Sinon, stocker localement
+            else {
+                const newPendingReport = {
+                    id: uuidv4(),
+                    description: description.trim(),
+                    sentimentText: sentimentText.trim() || undefined,
+                    impactTypeId: Number(impactTypeId),
+                    latitude: latitude || null,
+                    longitude: longitude || null,
+                    createdAt: new Date().toISOString(),
+                    networkStatus: NetworkStatus.PENDING
+                };
+                
+                await addPendingReport(newPendingReport);
+                incrementPendingCount();
+            }
             
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             reset(); 
@@ -113,7 +134,7 @@ export const ModalContent = () => {
         } catch (error) {
             console.error('Error creating report:', error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            alert('Échec lors de la création du signalement. Veuillez réessayer.');
+            Alert.alert('Erreur', 'Échec lors de la création du signalement. Veuillez réessayer.');
         }
     };
 
@@ -136,17 +157,17 @@ export const ModalContent = () => {
                 paddingVertical="$2" 
                 space={10}
             >
-            <Text fontSize={24} fontWeight="bold" color={"#4b61dc"} >Signaler un problème</Text>
+            <Text fontSize={24} fontWeight="bold" color={COLORS.primary} >Signaler un problème</Text>
                 <TouchableOpacity
                 style={{
-                    backgroundColor: '#dde3fb',
+                    backgroundColor: COLORS.primaryLight,
                     padding: 8,
                     borderRadius: 1000,
                     alignSelf: 'flex-start'
                 }}
                 onPress={() => router.back()}
             >
-                <XMarkIcon size={25} color="#4b61dc" /> 
+                <XMarkIcon size={25} color={COLORS.primary} /> 
             </TouchableOpacity>
                 </XStack>
                     
@@ -154,12 +175,12 @@ export const ModalContent = () => {
                 {/* Offline Warning */}
                 {!isConnected && (
                     <View
-                        backgroundColor="#ffeded"
+                        backgroundColor={COLORS.accentLight}
                         borderRadius={10}
                         padding="$3"
                         marginBottom="$4"
                     >
-                        <Text color="#dc4b4b" fontWeight="500">
+                        <Text color={COLORS.accent} fontWeight="500">
                             Vous êtes actuellement hors ligne. Votre signalement sera enregistré localement et 
                             envoyé automatiquement lorsque vous serez connecté.
                         </Text>
@@ -168,11 +189,11 @@ export const ModalContent = () => {
                 
                 {/* Description */}
                 <YStack space="$2" marginBottom="$4">
-                    <Text fontSize={16} fontWeight="500" color="#4b61dc">Description du problème</Text>
+                    <Text fontSize={16} fontWeight="500" color={COLORS.primary}>Description du problème</Text>
                     <Input
                         backgroundColor="white"
                         borderWidth={1}
-                        borderColor="#E2E8F0"
+                        borderColor={COLORS.border}
                         height={100}
                         paddingHorizontal={16}
                         fontSize={16}
@@ -187,11 +208,11 @@ export const ModalContent = () => {
                 
                 {/* Impact */}
                 <YStack space="$2" marginBottom="$4">
-                    <Text fontSize={16} fontWeight="500" color="#4b61dc">Impact sur votre quotidien</Text>
+                    <Text fontSize={16} fontWeight="500" color={COLORS.primary}>Impact sur votre quotidien</Text>
                     <Input
                         backgroundColor="white"
                         borderWidth={1}
-                        borderColor="#E2E8F0"
+                        borderColor={COLORS.border}
                         height={100}
                         paddingHorizontal={16}
                         fontSize={16}
@@ -206,7 +227,7 @@ export const ModalContent = () => {
 
                 {/* Location */}
                 <YStack space="$2" marginBottom="$4">
-                    <Text fontSize={16} fontWeight="500" color="#4b61dc">Localisation</Text>
+                    <Text fontSize={16} fontWeight="500" color={COLORS.primary}>Localisation</Text>
                     <XStack space="$2" alignItems="center">
                         <TouchableOpacity
                             onPress={handleGetLocation}
@@ -216,34 +237,34 @@ export const ModalContent = () => {
                             <XStack
                                 backgroundColor="white"
                                 borderWidth={1}
-                                borderColor="#E2E8F0"
+                                borderColor={COLORS.border}
                                 height={50}
                                 paddingHorizontal={16}
                                 alignItems="center"
                                 justifyContent="space-between"
                                 borderRadius={8}
                             >
-                                <Text color="#333">
+                                <Text color={COLORS.textPrimary}>
                                     {latitude && longitude
                                         ? "Position capturée"
                                         : "Capturer ma position"
                                     }
                                 </Text>
                                 {locationLoading ? (
-                                    <ActivityIndicator size="small" color="#4b61dc" />
+                                    <ActivityIndicator size="small" color={COLORS.primary} />
                                 ) : (
-                                    <MapPinIcon size={20} color="#4b61dc" />
+                                    <MapPinIcon size={20} color={COLORS.primary} />
                                 )}
                             </XStack>
                         </TouchableOpacity>
                     </XStack>
                     {locationError && (
-                        <Text color="#dc4b4b" fontSize={14}>
+                        <Text color={COLORS.accent} fontSize={14}>
                             {locationError}
                         </Text>
                     )}
                     {latitude && longitude && (
-                        <Text color="#4bdc7d" fontSize={14}>
+                        <Text color={COLORS.success} fontSize={14}>
                             Coordonnées : {latitude.toFixed(6)}, {longitude.toFixed(6)}
                         </Text>
                     )}
@@ -251,11 +272,11 @@ export const ModalContent = () => {
                 
                 {/* Impact Type Selection */}
                 <YStack space="$2" marginBottom="$4">
-                    <Text fontSize={16} fontWeight="500" color="#4b61dc">Type d'impact</Text>
+                    <Text fontSize={16} fontWeight="500" color={COLORS.primary}>Type d'impact</Text>
                     
                     {/* Loading state */}
                     {impactTypesLoading && (
-                        <Text color="#666" textAlign="center" paddingVertical="$3">Chargement des types d'impact...</Text>
+                        <Text color={COLORS.textTertiary} textAlign="center" paddingVertical="$3">Chargement des types d'impact...</Text>
                     )}
                     
                     {/* Selected Impact Type */}
@@ -263,7 +284,7 @@ export const ModalContent = () => {
                     <XStack marginBottom="$2" alignItems="center" justifyContent="space-between">
                         <XStack alignItems="center" space="$2">
                         <View 
-                            backgroundColor="#ffeded"
+                            backgroundColor={COLORS.accentLight}
                             padding="$2"
                             borderRadius={8}
                             alignItems="center"
@@ -317,7 +338,7 @@ export const ModalContent = () => {
                                 space="$3"
                                 >
                                 <View 
-                                    backgroundColor="#ffeded"
+                                    backgroundColor={COLORS.accentLight}
                                     padding="$2"
                                     borderRadius={8}
                                     alignItems="center"
@@ -336,12 +357,12 @@ export const ModalContent = () => {
                         
                         {filteredImpactTypes.length === 0 && (
                             <YStack padding="$4" alignItems="center">
-                            <Text color="#666">Aucun type d'impact trouvé</Text>
+                            <Text color={COLORS.textTertiary}>Aucun type d'impact trouvé</Text>
                             <TouchableOpacity 
                                 onPress={() => router.push('/NewImpactType')}
                                 style={{ marginTop: 10 }}
                             >
-                                <Text color="#4b61dc">Créer un nouveau type d'impact</Text>
+                                <Text color={COLORS.primary}>Créer un nouveau type d'impact</Text>
                             </TouchableOpacity>
                             </YStack>
                         )}
@@ -354,7 +375,7 @@ export const ModalContent = () => {
                         onPress={() => router.push('/NewImpactType')}
                         style={{ marginTop: 8 }}
                     >
-                        <Text color="#4b61dc">+ Ajouter un nouveau type d'impact</Text>
+                        <Text color={COLORS.primary}>+ Ajouter un nouveau type d'impact</Text>
                     </TouchableOpacity>
                     )}
                 </YStack>
@@ -363,7 +384,7 @@ export const ModalContent = () => {
                 {/* Submit Button */}
                 <XStack position="absolute" bottom={20 + bottom} left={16} right={16}>
                 <Button
-                    backgroundColor="#4b61dc"
+                    backgroundColor={COLORS.primary}
                     color="white"
                     fontSize={16}
                     fontWeight="500"

@@ -9,17 +9,19 @@ import { ApolloProvider } from '@apollo/client';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Slot, useRouter, useSegments } from "expo-router";
 import { View } from 'tamagui';
+import NetInfo from '@react-native-community/netinfo';
 
-import { client } from '../apollo/client';
+import { client, setupCache, handleNetworkStatusChange } from '../apollo/client';
 import config from '../tamagui.config';
 import { useAuthStore } from '~/store/authStore';
+import { useReportsStore } from '~/store/reportsStore';
 
 function RootLayoutNav() {
   const { isAuthenticated, checkAuth } = useAuthStore(state => ({
-    token: state.token,
     isAuthenticated: state.isAuthenticated,
     checkAuth: state.checkAuth
   }));
+  const { loadPendingReports } = useReportsStore();
   const segments = useSegments();
   const router = useRouter();
 
@@ -27,13 +29,14 @@ function RootLayoutNav() {
     const verifyAuth = async () => {
       try {
         await checkAuth();
+        await loadPendingReports();
       } catch (error) {
         console.error("Erreur lors de la vérification de l'authentification:", error);
       }
     };
     
     verifyAuth();
-  }, [checkAuth]);
+  }, [checkAuth, loadPendingReports]);
 
   useEffect(() => {
     const inAuthGroup = segments[0] === "(authenticated)";
@@ -45,7 +48,21 @@ function RootLayoutNav() {
     }
   }, [isAuthenticated, segments]);
 
-  // Wrap Slot in a View with explicit background color
+  // Monitor network status
+  useEffect(() => {
+    // Initialize cache
+    setupCache();
+    
+    // Subscribe to network state updates
+    const unsubscribe = NetInfo.addEventListener(state => {
+      handleNetworkStatusChange(!!state.isConnected);
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   return (
     <View flex={1} backgroundColor="white">
       <Slot />
@@ -55,8 +72,9 @@ function RootLayoutNav() {
 
 export default function Layout() {
   const [loaded] = useFonts({
-    Inter: require('@tamagui/font-inter/otf/Inter-Medium.otf'),
-    InterBold: require('@tamagui/font-inter/otf/Inter-Bold.otf'),
+    'Inter': require('@tamagui/font-inter/otf/Inter-Medium.otf'),
+    'Inter-Medium': require('@tamagui/font-inter/otf/Inter-Medium.otf'),
+    'Inter-Bold': require('@tamagui/font-inter/otf/Inter-Bold.otf'),
   });
 
   useEffect(() => {

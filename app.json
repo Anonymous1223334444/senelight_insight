@@ -1,41 +1,50 @@
 {
   "expo": {
-    "name": "senelight-insight",
+    "name": "SeneLight Insight",
     "slug": "senelight-insight",
     "version": "1.0.0",
-
-    "scheme": "senelight-insight",
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
-    },
-    "plugins": ["expo-router"],
-    "experiments": {
-      "typedRoutes": true,
-
-      "tsconfigPaths": true
-    },
-
     "orientation": "portrait",
-    "icon": "./assets/icone.png",
-
+    "icon": "./assets/branding/icon.png",
     "userInterfaceStyle": "light",
-
+    "scheme": "senelight",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/branding/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#4b93dc"
+      "backgroundColor": "#4b61dc"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.senelec.senelight"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#4b93dc"
-      }
+        "foregroundImage": "./assets/branding/adaptive-icon.png",
+        "backgroundColor": "#4b61dc"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "package": "com.senelec.senelight"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/branding/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Autoriser SeneLight à accéder à votre position pour localiser précisément les signalements de coupures."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true
     }
   }
 }

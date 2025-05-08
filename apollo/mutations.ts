@@ -25,33 +25,7 @@ export const CREATE_USER_MUTATION = gql`
   }
 `;
 
-export const GET_PROFILE_QUERY = gql`
-  query GetProfile {
-    profile {
-      id
-      name
-      email
-      phone
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
 // Impact Types
-export const GET_IMPACT_TYPES_QUERY = gql`
-  query GetImpactTypes {
-    impactTypes {
-      id
-      name
-      emoji
-      userId
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
 export const CREATE_IMPACT_TYPE_MUTATION = gql`
   mutation CreateImpactType($createImpactTypeInput: CreateImpactTypeInput!) {
     createImpactType(createImpactTypeInput: $createImpactTypeInput) {
@@ -62,30 +36,17 @@ export const CREATE_IMPACT_TYPE_MUTATION = gql`
   }
 `;
 
-// Reports
-export const GET_REPORTS_QUERY = gql`
-  query GetReports($filters: ReportFilterInput) {
-    reports(filters: $filters) {
+export const UPDATE_IMPACT_TYPE_MUTATION = gql`
+  mutation UpdateImpactType($id: Float!, $updateImpactTypeInput: CreateImpactTypeInput!) {
+    updateImpactType(id: $id, updateImpactTypeInput: $updateImpactTypeInput) {
       id
-      description
-      sentimentText
-      latitude
-      longitude
-      impactTypeId
-      userId
-      networkStatus
-      reportDate
-      createdAt
-      updatedAt
-      impactType {
-        id
-        name
-        emoji
-      }
+      name
+      emoji
     }
   }
 `;
 
+// Reports
 export const CREATE_REPORT_MUTATION = gql`
   mutation CreateReport($createReportInput: CreateReportInput!) {
     createReport(createReportInput: $createReportInput) {
@@ -110,52 +71,27 @@ export const UPDATE_REPORT_STATUS_MUTATION = gql`
   }
 `;
 
-// Analytics
-export const GET_REPORTS_BY_IMPACT_TYPE_QUERY = gql`
-  query GetReportsByImpactType {
-    reportsByImpactType {
-      impactTypeId
-      impactTypeName
-      count
-    }
-  }
-`;
-
-export const GET_LOCATION_HEATMAP_QUERY = gql`
-  query GetLocationHeatmap {
-    locationHeatmap {
+// Outages
+export const CREATE_OUTAGE_MUTATION = gql`
+  mutation CreateOutage($createOutageInput: CreateOutageInput!, $latitude: Float, $longitude: Float) {
+    createOutage(createOutageInput: $createOutageInput, latitude: $latitude, longitude: $longitude) {
+      id
+      description
       latitude
       longitude
-      count
+      reportCount
+      resolvedStatus
+      startDate
     }
   }
 `;
 
-export const GET_DAILY_REPORT_COUNTS_QUERY = gql`
-  query GetDailyReportCounts($days: Int) {
-    dailyReportCounts(days: $days) {
-      date
-      count
-    }
-  }
-`;
-
-export const GET_SILENT_ZONES_QUERY = gql`
-  query GetSilentZones {
-    silentZones {
-      latitude
-      longitude
-      radius
-    }
-  }
-`;
-
-export const GET_SENTIMENT_ANALYSIS_QUERY = gql`
-  query GetSentimentAnalysis {
-    sentimentAnalysis {
-      impactTypeName
-      averageSentiment
-      count
+export const RESOLVE_OUTAGE_MUTATION = gql`
+  mutation ResolveOutage($id: Float!) {
+    resolveOutage(id: $id) {
+      id
+      resolvedStatus
+      endDate
     }
   }
 `;

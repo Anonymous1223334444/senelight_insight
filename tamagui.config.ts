@@ -61,19 +61,8 @@ export const Button = styled(ButtonTamagui, {
   },
   maxWidth: 500,
   height: 50,
-
-  // Shaddows
-/*   shadowColor: '#000',
-  shadowOffset: {
-    height: 2,
-    width: 0,
-  },
-  shadowOpacity: 0.25,
-  shadowRadius: 3.84, */
-
-  // Button text
   color: '#FFFFFF',
-  fontWeight: '600', // Is not passed down to the text. Probably a bug in Tamagui: https://github.com/tamagui/tamagui/issues/1156#issuecomment-1802594930
+  fontWeight: '600',
   fontSize: 16,
 });
 
@@ -87,8 +76,6 @@ export const Input = styled(InputTamagui, {
   fontSize: 16,
   fontWeight: '500',
   marginBottom: '$4',
-  
-  // Placeholder styling
   placeholderTextColor: '#9CA3AF',
 });
 
@@ -129,9 +116,6 @@ const config = createTamagui({
 });
 
 type AppConfig = typeof config;
-
-// Enable auto-completion of props shorthand (ex: jc="center") for Tamagui templates.
-// Docs: https://tamagui.dev/docs/core/configuration
 
 declare module 'tamagui' {
   interface TamaguiCustomConfig extends AppConfig {}
