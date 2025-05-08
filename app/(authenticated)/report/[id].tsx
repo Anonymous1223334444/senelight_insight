@@ -1,12 +1,11 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Container } from '~/components/(authenticated)/Category/CategoryContainer';
-import { ScreenContent } from '~/components/(authenticated)/Category/CategoryScreenContainer';
+import { Container } from '~/components/(authenticated)/Report/ReportContainer';
+import { ScreenContent } from '~/components/(authenticated)/Report/ReportScreenContent';
 
-const CategoryDetails = () => {
+const ReportDetails = () => {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   
-
   return (
     <>
       <Stack.Screen 
@@ -21,4 +20,4 @@ const CategoryDetails = () => {
   );
 }
 
-export default CategoryDetails;
+export default ReportDetails;
