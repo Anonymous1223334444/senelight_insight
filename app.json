@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "senelight-insight",
+    "slug": "senelight-insight",
+    "version": "1.0.0",
+
+    "scheme": "senelight-insight",
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true,
+
+      "tsconfigPaths": true
+    },
+
+    "orientation": "portrait",
+    "icon": "./assets/icone.png",
+
+    "userInterfaceStyle": "light",
+
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#4b93dc"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#4b93dc"
+      }
+    }
+  }
+}
