@@ -4,11 +4,11 @@
     "slug": "senelight-insight",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/branding/icon.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "senelight",
     "splash": {
-      "image": "./assets/branding/splash.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#4b61dc"
     },
@@ -19,7 +19,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/branding/adaptive-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4b61dc"
       },
       "permissions": [

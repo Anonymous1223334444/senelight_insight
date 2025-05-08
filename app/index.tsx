@@ -65,7 +65,7 @@ export default function Welcome() {
         >
           <Animated.View style={animatedImageStyle}>
             <Image 
-              source={require('~/assets/onboarding/electricity.png')}
+              source={require('~/assets/electricity.png')}
               width={300}
               height={300}
             />

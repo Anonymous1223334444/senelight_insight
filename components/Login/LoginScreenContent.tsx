@@ -59,7 +59,7 @@ export const ScreenContent = () => {
           paddingTop={top}
         >
           <Image 
-            source={require('../../assets/onboarding/mobile-app.png')}
+            source={require('../../assets/icon.png')}
             width={250}
             height={250}
           />

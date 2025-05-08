@@ -1,96 +1,93 @@
-import { YStack, H2, Separator, Theme, Image, Paragraph, View, Text } from 'tamagui';
-import { TouchableOpacity } from 'react-native';
+import { YStack, Theme, Image, View, Text } from 'tamagui';
+import { TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { Button } from '~/components/Button';
 import { Input } from '~/components/Input';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dimensions } from 'react-native';
 import { 
   ArrowLongLeftIcon,
-  CurrencyDollarIcon,
   UserIcon,
   EnvelopeIcon,
   LockClosedIcon,
-  KeyIcon
+  KeyIcon,
+  PhoneIcon
 } from 'react-native-heroicons/outline';
 import { useRouter } from 'expo-router';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import CurrencyBottomSheet from '~/components/Register/CurrencyBottomSheet';
-import { useRef } from 'react';
-import { CurrencyType, currencyDescriptions, currencySymbols } from '../../constants/currencies';
 import { useMutation } from '@apollo/client';
 import { CREATE_USER_MUTATION } from '~/apollo/mutations';
-import { CreateUserInput, CreateUserMutationVariables } from '~/apollo/types';
-import { Alert } from 'react-native';
-import { useRegisterStore } from '~/store/registerStore';
-
+import { useState } from 'react';
+import { COLORS } from '~/constants/theme';
 
 export const ScreenContent = () => {
-  const { bottom, top } = useSafeAreaInsets();
+  const { top } = useSafeAreaInsets();
   const router = useRouter();
-  const bottomSheetRef = useRef<BottomSheetModal>(null);
-
-  const { 
-    name, email, password, confirmPassword, 
-    selectedCurrency, currencyDisplayText, isLoading,
-    setName, setEmail, setPassword, setConfirmPassword,
-    setSelectedCurrency, setCurrencyDisplayText, setIsLoading, resetForm
-  } = useRegisterStore();
+  
+  // État local au lieu de useRegisterStore
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   
   const [createUser, { loading }] = useMutation(CREATE_USER_MUTATION);
   
-  const handleOpenBottomSheet = () => {
-    bottomSheetRef.current?.present(); 
-  };
-  
-  const handleClosePress = () => bottomSheetRef.current?.dismiss();
-  
-  const handleSelectCurrency = (currency: CurrencyType) => {
-    setSelectedCurrency(currency);
-    setCurrencyDisplayText(`${currency} - ${currencyDescriptions[currency]}`);
-  };
-  
   const handleRegister = async () => {
     // Validation
-    if (!name || !email || !password || !confirmPassword || !selectedCurrency) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!name.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer votre nom');
       return;
     }
-    
+    if (!email.trim()) {
+      Alert.alert('Erreur', 'Veuillez entrer votre email');
+      return;
+    }
+    if (!password) {
+      Alert.alert('Erreur', 'Veuillez entrer un mot de passe');
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert('Erreur', 'Le mot de passe doit comporter au moins 6 caractères');
+      return;
+    }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
       return;
     }
     
     setIsLoading(true);
     
     try {
-      const userInput: CreateUserInput = {
-        name,
-        email,
-        password,
-        currency: selectedCurrency
-      };
-      
       const { data } = await createUser({
         variables: {
-          createUserInput: userInput
-        } as CreateUserMutationVariables
+          createUserInput: {
+            name,
+            email,
+            password,
+            phone: phone || undefined
+          }
+        }
       });
       
       if (data?.createUser) {
-        Alert.alert('Success', 'Account created successfully', [
+        Alert.alert('Succès', 'Compte créé avec succès', [
           { 
             text: 'OK', 
             onPress: () => {
-              resetForm();
+              // Réinitialiser le formulaire
+              setName('');
+              setEmail('');
+              setPassword('');
+              setConfirmPassword('');
+              setPhone('');
+              // Naviguer vers la page de connexion
               router.replace('/login');
             } 
           }
         ]);
       }
     } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create account');
+      Alert.alert('Erreur', error instanceof Error ? error.message : 'Échec de la création du compte');
     } finally {
       setIsLoading(false);
     }
@@ -107,14 +104,14 @@ export const ScreenContent = () => {
         >
           <TouchableOpacity
             style={{
-              backgroundColor: '#dde3fb',
+              backgroundColor: COLORS.primaryLight,
               padding: 12,
               borderRadius: 1000,
               alignSelf: 'flex-start'
             }}
             onPress={() => router.back()}
           >
-            <ArrowLongLeftIcon size={25} color="#4b61dc" />
+            <ArrowLongLeftIcon size={25} color={COLORS.primary} />
           </TouchableOpacity>
 
           <View
@@ -122,33 +119,32 @@ export const ScreenContent = () => {
             width={"100%"}
             padding={"$4"}
             borderRadius={"$10"}
-            backgroundColor={'#dde3fb'}
+            backgroundColor={COLORS.primaryLight}
             marginTop={"$2"}
-            
           >
             <Text
               fontSize={32}
               fontWeight={"bold"}
               textAlign={"center"}
               marginBottom={"$2"}
-              color={"#4b61dc"}
+              color={COLORS.primary}
             >
-              Create Account
+              Créer un compte
             </Text>
             <Text
               fontSize={16}
               textAlign={"center"}
               marginBottom={"$4"}
-              color={"#666"}
+              color={COLORS.textSecondary}
             >
-              Sign up to get started
+              Inscrivez-vous pour commencer
             </Text>
             
             <Input
-              placeholder="Full Name"
+              placeholder="Nom complet"
               autoCapitalize="words"
               autoCorrect={false}
-              icon={<UserIcon size={20} color="#9CA3AF" />}
+              icon={<UserIcon size={20} color={COLORS.textTertiary} />}
               value={name}
               onChangeText={setName}
             />
@@ -158,72 +154,59 @@ export const ScreenContent = () => {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              icon={<EnvelopeIcon size={20} color="#9CA3AF" />}
+              icon={<EnvelopeIcon size={20} color={COLORS.textTertiary} />}
               value={email}
               onChangeText={setEmail}
             />
             
-            {/* Currency Selector */}
-            <TouchableOpacity 
-              activeOpacity={0.8} 
-              onPress={handleOpenBottomSheet}
-              style={{ width: '100%' }}
-            >
-              <View pointerEvents="none">
-                <Input
-                  placeholder={currencyDisplayText}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  icon={<CurrencyDollarIcon size={20} color="#9CA3AF" />}
-                  editable={false}
-                  value={currencyDisplayText !== "Select Currency" ? currencyDisplayText : ""}
-                />
-              </View>
-            </TouchableOpacity>
+            <Input
+              placeholder="Téléphone (optionnel)"
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              icon={<PhoneIcon size={20} color={COLORS.textTertiary} />}
+              value={phone}
+              onChangeText={setPhone}
+            />
             
             <Input
-              placeholder="Password"
+              placeholder="Mot de passe"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              icon={<LockClosedIcon size={20} color="#9CA3AF" />}
+              icon={<LockClosedIcon size={20} color={COLORS.textTertiary} />}
               value={password}
               onChangeText={setPassword}
             />
             
             <Input
-              placeholder="Confirm Password"
+              placeholder="Confirmer le mot de passe"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              icon={<KeyIcon size={20} color="#9CA3AF" />}
+              icon={<KeyIcon size={20} color={COLORS.textTertiary} />}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
             
             <Button 
-              title="Register" 
+              title="S'inscrire" 
               marginBottom={"$4"} 
               onPress={handleRegister}
               disabled={isLoading || loading}
+              loading={isLoading || loading}
             />
             
             <View paddingBottom={"$4"}>
               <Link href={{ pathname: '/login' }} asChild>
-                <Text color={"#4b61dc"} textAlign='center'>
-                  Already have an account? Sign in
+                <Text color={COLORS.primary} textAlign='center'>
+                  Vous avez déjà un compte ? Connectez-vous
                 </Text>
               </Link>
             </View>
           </View>
         </YStack>
       </YStack>
-      <CurrencyBottomSheet 
-        ref={bottomSheetRef} 
-        onClose={handleClosePress}
-        onSelect={handleSelectCurrency}
-        selectedCurrency={selectedCurrency}
-      />
     </Theme>
   );
 };

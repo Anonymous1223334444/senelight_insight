@@ -24,6 +24,8 @@
     "@tamagui/react-native-media-driver": "^1.125.8",
     "@tamagui/shorthands": "^1.125.8",
     "@tamagui/themes": "^1.125.8",
+    "apollo-link-queue": "^3.1.0",
+    "apollo3-cache-persist": "^0.15.0",
     "date-fns": "^4.1.0",
     "expo": "^52.0.37",
     "expo-constants": "~17.0.7",
