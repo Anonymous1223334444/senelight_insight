@@ -5,7 +5,7 @@ import { TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Al
 import * as Haptics from 'expo-haptics';
 import { XMarkIcon, MapPinIcon } from 'react-native-heroicons/outline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useReportsStore } from '~/store/useReportsStore';
+import { useReportsStore } from '~/store/reportsStore';
 import { useMutation, useQuery } from '@apollo/client';
 import { CREATE_REPORT_MUTATION, GET_IMPACT_TYPES_QUERY } from '~/apollo/mutations';
 import { 
@@ -47,8 +47,8 @@ export const ModalContent = () => {
         GET_IMPACT_TYPES_QUERY
     );
     
-    const [createReport, { loading: createLoading }] = useMutation
-        { createReport: { id: string } }, 
+    const [createReport, { loading: createLoading }] = useMutation<
+        { createReport: { id: string } },
         CreateReportMutationVariables
     >(CREATE_REPORT_MUTATION);
 

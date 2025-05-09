@@ -8,6 +8,7 @@ import { useMutation } from '@apollo/client';
 import { LOGIN_MUTATION } from '~/apollo/mutations';
 import { useAuthStore } from '~/store/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LoginResponse, LoginUserInput } from '~/apollo/types';
 import { EnvelopeIcon, LockClosedIcon } from 'react-native-heroicons/outline';
 import { COLORS } from '~/constants/theme';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -22,8 +23,10 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const { login } = useAuthStore();
 
-  // Version simplifiée sans typage générique complexe
-  const [loginMutation, { loading }] = useMutation(LOGIN_MUTATION, {
+  const [loginMutation, { loading }] = useMutation<
+    { login: LoginResponse },
+    { loginInput: LoginUserInput }
+  >(LOGIN_MUTATION, {
     onCompleted: async (data) => {
       const { access_token, user } = data.login;
       await AsyncStorage.setItem('auth_token', access_token);

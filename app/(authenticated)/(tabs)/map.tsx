@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { YStack, Theme, Text, XStack, View, Spinner, Button } from 'tamagui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dimensions, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import MapView, { Marker, Callout, PROVIDER_GOOGLE, Circle, Heatmap } from 'react-native-maps';
+import LeafletView from 'react-native-leaflet-view';
 import * as Location from 'expo-location';
 import { useQuery } from '@apollo/client';
 import { GET_MAP_DATA_QUERY } from '~/apollo/queries';
@@ -21,7 +21,8 @@ import * as Haptics from 'expo-haptics';
 export default function MapScreen() {
   const { bottom, top } = useSafeAreaInsets();
   const screenWidth = Dimensions.get('window').width;
-  const mapRef = useRef<MapView>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([14.7167, -17.4677]); // Dakar par défaut
+  const [zoom, setZoom] = useState(12);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [locationPermission, setLocationPermission] = useState<boolean>(false);
   const [mapType, setMapType] = useState<'standard' | 'satellite'>('standard');
@@ -46,34 +47,16 @@ export default function MapScreen() {
           latitude: location.coords.latitude,
           longitude: location.coords.longitude
         });
+        setMapCenter([location.coords.latitude, location.coords.longitude]);
       }
     })();
   }, []);
   
-  // Centrer la carte sur le Sénégal si pas de localisation utilisateur
-  const initialRegion = userLocation 
-    ? {
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      }
-    : {
-        latitude: 14.7167, // Dakar
-        longitude: -17.4677,
-        latitudeDelta: 0.5,
-        longitudeDelta: 0.5,
-      };
-    
   const handleCenterMap = () => {
     Haptics.selectionAsync();
-    if (userLocation && mapRef.current) {
-      mapRef.current.animateToRegion({
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      });
+    if (userLocation) {
+      setMapCenter([userLocation.latitude, userLocation.longitude]);
+      setZoom(14);
     }
   };
   
@@ -87,92 +70,70 @@ export default function MapScreen() {
     refetch();
   };
   
-  const renderMarkers = () => {
-    if (!mapData) return null;
+  // Préparation des marqueurs pour LeafletView
+  const prepareMarkers = () => {
+    if (!mapData) return [];
     
     const markers = [];
     
     // Filtrer les données selon le filtre actif
     if (filterType === 'all' || filterType === 'outages') {
       mapData.outages.forEach((outage: OutagePoint) => {
-        markers.push(
-          <Marker
-            key={`outage-${outage.id}`}
-            coordinate={{
-              latitude: outage.latitude,
-              longitude: outage.longitude
-            }}
-            pinColor={outage.resolved ? COLORS.success : COLORS.accent}
-            title={outage.resolved ? 'Coupure résolue' : 'Coupure active'}
-            description={`${outage.reportCount} signalement(s) associé(s)`}
-          >
-            <View
-              backgroundColor={outage.resolved ? COLORS.successLight : COLORS.accentLight}
-              borderRadius={30}
-              width={36}
-              height={36}
-              alignItems="center"
-              justifyContent="center"
-              borderWidth={2}
-              borderColor={outage.resolved ? COLORS.success : COLORS.accent}
-            >
-              <BoltIcon size={18} color={outage.resolved ? COLORS.success : COLORS.accent} />
-            </View>
-            <Callout>
-              <View width={200} padding={10}>
-                <Text fontWeight="bold" color={outage.resolved ? COLORS.success : COLORS.accent}>
-                  {outage.resolved ? 'Coupure résolue' : 'Coupure active'}
-                </Text>
-                <Text marginTop={5}>
-                  {outage.reportCount} signalement{outage.reportCount > 1 ? 's' : ''} associé{outage.reportCount > 1 ? 's' : ''}
-                </Text>
-              </View>
-            </Callout>
-          </Marker>
-        );
+        markers.push({
+          id: `outage-${outage.id}`,
+          position: { lat: outage.latitude, lng: outage.longitude },
+          icon: outage.resolved ? 'greenmarker' : 'redmarker', // Utiliser des icônes prédéfinies ou des icônes personnalisées
+          title: outage.resolved ? 'Coupure résolue' : 'Coupure active',
+          description: `${outage.reportCount} signalement(s) associé(s)`
+        });
       });
     }
     
     if (filterType === 'all' || filterType === 'reports') {
       mapData.reports.forEach((report: ReportPoint) => {
-        markers.push(
-          <Marker
-            key={`report-${report.id}`}
-            coordinate={{
-              latitude: report.latitude,
-              longitude: report.longitude
-            }}
-            title="Signalement"
-            description={report.impactType}
-          >
-            <View
-              backgroundColor={COLORS.primaryLight}
-              borderRadius={30}
-              width={30}
-              height={30}
-              alignItems="center"
-              justifyContent="center"
-              borderWidth={2}
-              borderColor={COLORS.primary}
-            >
-              <ExclamationTriangleIcon size={14} color={COLORS.primary} />
-            </View>
-            <Callout>
-              <View width={200} padding={10}>
-                <Text fontWeight="bold" color={COLORS.primary}>Signalement</Text>
-                <Text marginTop={5}>Type d'impact: {report.impactType}</Text>
-                <Text marginTop={2}>
-                  Statut: {report.status === 'SENT' ? 'Envoyé' : 
-                          report.status === 'PENDING' ? 'En attente' : 'Échec'}
-                </Text>
-              </View>
-            </Callout>
-          </Marker>
-        );
+        markers.push({
+          id: `report-${report.id}`,
+          position: { lat: report.latitude, lng: report.longitude },
+          icon: 'bluemarker',
+          title: 'Signalement',
+          description: `Type d'impact: ${report.impactType}`
+        });
       });
     }
     
     return markers;
+  };
+  
+  // Préparation des cercles pour LeafletView
+  const prepareCircles = () => {
+    return [
+      {
+        id: 'silence-zone-1',
+        center: { lat: 14.7828, lng: -16.9456 },
+        radius: 3000,
+        color: 'rgba(150, 150, 150, 0.5)',
+        fillColor: 'rgba(150, 150, 150, 0.3)'
+      },
+      {
+        id: 'silence-zone-2',
+        center: { lat: 14.1652, lng: -16.0769 },
+        radius: 4000,
+        color: 'rgba(150, 150, 150, 0.5)',
+        fillColor: 'rgba(150, 150, 150, 0.3)'
+      }
+    ];
+  };
+
+  // Configuration de la carte LeafletView
+  const mapOptions = {
+    center: mapCenter,
+    zoom: zoom,
+    zoomControl: false,
+    attributionControl: true,
+    layerUrl: mapType === 'standard' 
+      ? 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    showUserLocation: locationPermission
   };
 
   return (
@@ -220,34 +181,18 @@ export default function MapScreen() {
               </Button>
             </YStack>
           ) : (
-            <MapView
-              ref={mapRef}
+            <LeafletView
               style={{ width: '100%', height: '100%' }}
-              initialRegion={initialRegion}
-              provider={PROVIDER_GOOGLE}
-              showsUserLocation={locationPermission}
-              showsMyLocationButton={false}
-              showsCompass={true}
-              mapType={mapType}
-            >
-              {renderMarkers()}
-              
-              {/* Zones silencieuses (simulées) */}
-              <Circle
-                center={{ latitude: 14.7828, longitude: -16.9456 }}
-                radius={3000}
-                fillColor="rgba(150, 150, 150, 0.3)"
-                strokeColor="rgba(150, 150, 150, 0.5)"
-                strokeWidth={1}
-              />
-              <Circle
-                center={{ latitude: 14.1652, longitude: -16.0769 }}
-                radius={4000}
-                fillColor="rgba(150, 150, 150, 0.3)"
-                strokeColor="rgba(150, 150, 150, 0.5)"
-                strokeWidth={1}
-              />
-            </MapView>
+              mapOptions={mapOptions}
+              mapMarkers={prepareMarkers()}
+              mapCircles={prepareCircles()}
+              onMapMarkerClicked={(marker) => {
+                console.log('Marker clicked:', marker);
+              }}
+              onMapClicked={(position) => {
+                console.log('Map clicked:', position);
+              }}
+            />
           )}
           
           {/* Map Controls */}
