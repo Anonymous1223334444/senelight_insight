@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { createWithEqualityFn } from 'zustand/traditional';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NetworkStatus } from '../apollo/types';
 
@@ -31,7 +31,7 @@ export type PendingReport = {
   networkStatus: NetworkStatus;
 };
 
-export const useReportsStore = create<ReportStore>((set, get) => ({
+export const useReportsStore = createWithEqualityFn<ReportStore>((set, get) => ({
   description: '',
   sentimentText: '',
   impactTypeId: null,

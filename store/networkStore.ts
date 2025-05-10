@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { createWithEqualityFn } from 'zustand/traditional';
 import { NetworkStatus } from '../apollo/types';
 
 interface NetworkState {
@@ -10,7 +10,7 @@ interface NetworkState {
   updateConnectionStatus: (status: boolean) => void;
 }
 
-export const useNetworkStore = create<NetworkState>((set) => ({
+export const useNetworkStore = createWithEqualityFn<NetworkState>((set) => ({
   isConnected: true,
   pendingReports: 0,
   addPendingReport: () => set((state) => ({ pendingReports: state.pendingReports + 1 })),

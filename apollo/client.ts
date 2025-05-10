@@ -11,12 +11,16 @@ import { useNetworkStore } from '../store/networkStore';
 const cache = new InMemoryCache();
 
 export const setupCache = async () => {
-  await persistCache({
-    cache,
-    storage: AsyncStorage,
-    maxSize: false,
-    debug: __DEV__,
-  });
+  try {
+    await persistCache({
+      cache,
+      storage: AsyncStorage,
+      maxSize: false,
+      debug: __DEV__,
+    });
+  } catch (error) {
+    console.error('Error persisting cache:', error);
+  }
 };
 
 // Queue link for offline support
@@ -24,13 +28,18 @@ const queueLink = new QueueLink();
 
 // Auth link for authentication
 const authLink = setContext(async (_, { headers }) => {
-  const token = await AsyncStorage.getItem('auth_token');
-  return {
-    headers: {
-      ...headers,
-      authorization: token ? `Bearer ${token}` : "",
-    }
-  };
+  try {
+    const token = await AsyncStorage.getItem('auth_token');
+    return {
+      headers: {
+        ...headers,
+        authorization: token ? `Bearer ${token}` : "",
+      }
+    };
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return { headers };
+  }
 });
 
 // Error handling link
@@ -60,35 +69,58 @@ const retryLink = new RetryLink({
   },
 });
 
-// HTTP link
+// HTTP link - Vérifiez que l'URL est correcte
 const httpLink = createHttpLink({
-  uri: 'http://192.168.1.22:3000/graphql', // Android emulator
-  // uri: 'http://localhost:3000/graphql', // iOS simulator
+  uri: __DEV__ 
+    ? 'http://192.168.1.22/graphql' // Android emulator
+    : 'https://192.168.1.22/graphql', // Production
+  // uri: 'http://192.168.1.22:3000/graphql', // Utilisez cette URI si vous testez sur un appareil physique
 });
 
-// Client instance
-export const client = new ApolloClient({
-  link: authLink.concat(errorLink).concat(retryLink).concat(queueLink).concat(httpLink),
-  cache,
-  defaultOptions: {
-    watchQuery: {
-      fetchPolicy: 'cache-and-network',
+// Client instance avec gestion d'erreur
+let client: ApolloClient<NormalizedCacheObject>;
+
+try {
+  client = new ApolloClient({
+    link: authLink.concat(errorLink).concat(retryLink).concat(queueLink).concat(httpLink),
+    cache,
+    defaultOptions: {
+      watchQuery: {
+        fetchPolicy: 'cache-and-network',
+        errorPolicy: 'all',
+      },
+      query: {
+        errorPolicy: 'all',
+      },
     },
-  },
-  connectToDevTools: __DEV__,
-});
+    connectToDevTools: __DEV__,
+  });
+} catch (error) {
+  console.error('Error creating Apollo Client:', error);
+  // Fallback client
+  client = new ApolloClient({
+    uri: 'http://192.168.1.22/graphql',
+    cache: new InMemoryCache(),
+  });
+}
+
+export { client };
 
 // Network status management
 export const handleNetworkStatusChange = (isConnected: boolean) => {
-  useNetworkStore.getState().updateConnectionStatus(isConnected);
-  
-  if (isConnected) {
-    // Start processing queued operations
-    queueLink.open();
-    console.log('Network connection restored - processing queued operations');
-  } else {
-    // Stop processing and start queueing operations
-    queueLink.close();
-    console.log('Network connection lost - queueing operations');
+  try {
+    useNetworkStore.getState().updateConnectionStatus(isConnected);
+    
+    if (isConnected) {
+      // Start processing queued operations
+      queueLink.open();
+      console.log('Network connection restored - processing queued operations');
+    } else {
+      // Stop processing and start queueing operations
+      queueLink.close();
+      console.log('Network connection lost - queueing operations');
+    }
+  } catch (error) {
+    console.error('Error handling network status change:', error);
   }
 };

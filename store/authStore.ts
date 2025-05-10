@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { createWithEqualityFn } from 'zustand/traditional';
 import { persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -22,7 +22,7 @@ interface AuthState {
     checkAuth: () => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>()(
+export const useAuthStore = createWithEqualityFn<AuthState>()(
     persist(
         (set, get) => ({
             token: null,
@@ -85,5 +85,6 @@ export const useAuthStore = create<AuthState>()(
                 },
             },
         }
-    )
+    ),
+    Object.is
 );
