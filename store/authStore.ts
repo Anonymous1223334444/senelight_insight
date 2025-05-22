@@ -16,7 +16,7 @@ interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     tokenExpiration: number | null;
-    login: (token: string, user: User) => void;
+    login: (token: string, user: User) => Promise<void>; // Changed to Promise<void>
     updateUserProfile: (user: User) => void;
     logout: () => Promise<void>;
     checkAuth: () => Promise<void>;
@@ -30,9 +30,11 @@ export const useAuthStore = createWithEqualityFn<AuthState>()(
             isAuthenticated: false,
             tokenExpiration: null,
             
-            login: (token, user) => {
+            login: async (token, user) => { // Add async here
                 const expirationDate = Date.now() + (30 * 24 * 60 * 60 * 1000);
                 
+                await AsyncStorage.setItem('auth_token', token); // Added line
+
                 set({ 
                     token, 
                     user,
