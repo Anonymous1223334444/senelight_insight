@@ -1,6 +1,7 @@
 import { ApolloClient, InMemoryCache, createHttpLink, NormalizedCacheObject } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { QueueLink } from 'apollo-link-queue';
 import { persistCache } from 'apollo3-cache-persist';
 import { onError } from '@apollo/client/link/error';
@@ -70,11 +71,14 @@ const retryLink = new RetryLink({
 });
 
 // HTTP link - Vérifiez que l'URL est correcte
+const graphqlUri = Constants.expoConfig?.extra?.EXPO_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql';
+
+if (!Constants.expoConfig?.extra?.EXPO_PUBLIC_GRAPHQL_URL) {
+  console.warn("EXPO_PUBLIC_GRAPHQL_URL is not set. Using default http://localhost:4000/graphql. Please set this in your app.json or app.config.js under extra.");
+}
+
 const httpLink = createHttpLink({
-  uri: __DEV__ 
-    ? 'http://192.168.1.22/graphql' // Android emulator
-    : 'https://192.168.1.22/graphql', // Production
-  // uri: 'http://192.168.1.22:3000/graphql', // Utilisez cette URI si vous testez sur un appareil physique
+  uri: graphqlUri,
 });
 
 // Client instance avec gestion d'erreur
@@ -99,7 +103,7 @@ try {
   console.error('Error creating Apollo Client:', error);
   // Fallback client
   client = new ApolloClient({
-    uri: 'http://192.168.1.22/graphql',
+    uri: graphqlUri, // Use the same variable here
     cache: new InMemoryCache(),
   });
 }
@@ -124,3 +128,13 @@ export const handleNetworkStatusChange = (isConnected: boolean) => {
     console.error('Error handling network status change:', error);
   }
 };
+
+// Note: EXPO_PUBLIC_GRAPHQL_URL needs to be defined in the `extra` field of `app.json` or `app.config.js`.
+// Example for `app.json`:
+// {
+//   "expo": {
+//     "extra": {
+//       "EXPO_PUBLIC_GRAPHQL_URL": "your_graphql_endpoint_here"
+//     }
+//   }
+// }
