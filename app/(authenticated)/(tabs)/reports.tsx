@@ -11,6 +11,7 @@ import {
 } from 'react-native-heroicons/outline';
 import * as Haptics from 'expo-haptics';
 import { GetReportsResponse, NetworkStatus } from '~/apollo/types';
+import { ErrorMessage } from '~/components/common/ErrorMessage';
 import { COLORS } from '~/constants/theme';
 import { ReportItem } from '~/components/(authenticated)/Home/ReportItem';
 import { format, parseISO } from 'date-fns';
@@ -133,9 +134,11 @@ export default function ReportsScreen() {
               <Spinner size="large" color={COLORS.primary} />
             </YStack>
           ) : error ? (
-            <YStack alignItems="center" paddingVertical="$4">
-              <Text color={COLORS.accent}>Erreur de chargement des signalements</Text>
-            </YStack>
+            <ErrorMessage 
+              message="Erreur de chargement des signalements" 
+              details={error.message} // Pass the actual error message
+              onRetry={onRefresh} // Use the existing refresh function
+            />
           ) : !data?.reports || data.reports.length === 0 ? (
             <YStack alignItems="center" paddingVertical="$4">
               <Text color={COLORS.textSecondary}>Aucun signalement trouvé</Text>
